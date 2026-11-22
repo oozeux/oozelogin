@@ -1,0 +1,4 @@
+#!/bin/bash
+. /usr/lib/oozelogin/env
+export OOZELOGIN_PREVIEW=1
+exec quickshell -p "$OOZELOGIN_QML/shell.qml" "$@"

@@ -1,0 +1,6 @@
+#!/bin/bash
+. /usr/lib/oozelogin/env
+OOZELOGIN_QS="$(command -v quickshell)"
+export OOZELOGIN_QS
+export OOZELOGIN_SYNC=/usr/bin/oozelogin-sync
+exec quickshell -p "$OOZELOGIN_QML/settings.qml" "$@"

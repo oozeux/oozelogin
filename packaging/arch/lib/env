@@ -1,0 +1,9 @@
+[ -r /etc/oozelogin/oozelogin.conf ] && . /etc/oozelogin/oozelogin.conf
+
+export OOZELOGIN_DIR=/var/lib/oozelogin
+export OOZELOGIN_CACHE=/var/cache/oozelogin
+export OOZELOGIN_BASE=/etc/oozelogin/settings.json
+export OOZELOGIN_SESSIONS=/usr/share/wayland-sessions
+export OOZELOGIN_COMPOSITOR="${COMPOSITOR:-hyprland}"
+export OOZELOGIN_LAYOUTS="${KEYBOARD_LAYOUTS:-us}"
+export OOZELOGIN_QML=/usr/share/oozelogin/qml

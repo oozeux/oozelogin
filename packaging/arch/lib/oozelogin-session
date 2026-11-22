@@ -1,0 +1,185 @@
+#!/bin/bash
+. /usr/lib/oozelogin/env
+
+CACHE="$OOZELOGIN_CACHE"
+LOG="$CACHE/greeter.log"
+READY="$CACHE/greeter.ready"
+OK="$CACHE/greeter.ok"
+RUN=/usr/lib/oozelogin/oozelogin-run
+
+export HOME="$CACHE/home"
+export XDG_CACHE_HOME="$HOME/.cache"
+export XDG_STATE_HOME="$HOME/.local/state"
+export XDG_DATA_HOME="$HOME/.local/share"
+export XDG_CONFIG_HOME="$HOME/.config"
+export QT_QPA_PLATFORM=wayland
+mkdir -p "$XDG_CACHE_HOME" "$XDG_STATE_HOME" "$XDG_DATA_HOME" "$XDG_CONFIG_HOME"
+
+[ -f "$LOG" ] && mv -f "$LOG" "$LOG.old"
+
+hyprland_format() {
+  case "$HYPRLAND_CONFIG_FORMAT" in
+    lua|hyprlang) echo "$HYPRLAND_CONFIG_FORMAT"; return ;;
+  esac
+  v="$(Hyprland --version 2>/dev/null | sed -n 's/^Hyprland \([0-9][0-9.]*\).*/\1/p' | head -n1)"
+  if [ -n "$v" ] && [ "$(printf '%s\n0.55\n' "$v" | sort -V | head -n1)" = "0.55" ]; then
+    echo lua
+  else
+    echo hyprlang
+  fi
+}
+
+write_hyprlang() {
+  cat >"$1" <<CONF
+monitor = , preferred, auto, 1
+
+input {
+  kb_layout = $OOZELOGIN_LAYOUTS
+  kb_options = $KEYBOARD_OPTIONS
+}
+
+misc {
+  disable_hyprland_logo = true
+  disable_splash_rendering = true
+  force_default_wallpaper = 0
+}
+
+ecosystem {
+  no_update_news = true
+  no_donation_nag = true
+}
+
+animations {
+  enabled = false
+}
+
+exec-once = $RUN
+CONF
+}
+
+write_lua() {
+  cat >"$1" <<CONF
+hl.monitor({
+  output = "",
+  mode = "preferred",
+  position = "auto",
+  scale = 1,
+})
+
+hl.config({
+  input = {
+    kb_layout = "$OOZELOGIN_LAYOUTS",
+    kb_options = "$KEYBOARD_OPTIONS",
+  },
+  misc = {
+    disable_hyprland_logo = true,
+    disable_splash_rendering = true,
+    force_default_wallpaper = 0,
+  },
+  ecosystem = {
+    no_update_news = true,
+    no_donation_nag = true,
+  },
+  animations = {
+    enabled = false,
+  },
+})
+
+hl.on("hyprland.start", function()
+  hl.exec_cmd("$RUN")
+end)
+CONF
+}
+
+write_niri() {
+  cat >"$1" <<CONF
+input {
+  keyboard {
+    xkb {
+      layout "$OOZELOGIN_LAYOUTS"
+      options "$KEYBOARD_OPTIONS"
+    }
+  }
+}
+
+prefer-no-csd
+
+hotkey-overlay {
+  skip-at-startup
+}
+
+spawn-at-startup "$RUN"
+CONF
+}
+
+if [ "$OOZELOGIN_COMPOSITOR" = "niri" ]; then
+  CONFIG="$XDG_CONFIG_HOME/oozelogin-niri.kdl"
+  write_niri "$CONFIG"
+  DEFAULT_CMD="niri --config $CONFIG"
+else
+  FORMAT="$(hyprland_format)"
+  export OOZELOGIN_HYPRLAND_FORMAT="$FORMAT"
+  if [ "$FORMAT" = "lua" ]; then
+    CONFIG="$XDG_CONFIG_HOME/oozelogin-hyprland.lua"
+    write_lua "$CONFIG"
+    if command -v start-hyprland >/dev/null 2>&1; then
+      DEFAULT_CMD="start-hyprland -- --config $CONFIG"
+    else
+      DEFAULT_CMD="Hyprland --config $CONFIG"
+    fi
+  else
+    CONFIG="$XDG_CONFIG_HOME/oozelogin-hyprland.conf"
+    write_hyprlang "$CONFIG"
+    DEFAULT_CMD="Hyprland --config $CONFIG"
+  fi
+fi
+
+export OOZELOGIN_COMPOSITOR_CONFIG="$CONFIG"
+COMPOSITOR_CMD="${COMPOSITOR_COMMAND:-$DEFAULT_CMD}"
+
+if [ "$FALLBACK_ENABLE" != "1" ]; then
+  eval "exec $COMPOSITOR_CMD" >>"$LOG" 2>&1
+fi
+
+rm -f "$READY" "$OK"
+
+stop_compositor() {
+  pkill -TERM -P "$pid"
+  n=0
+  while kill -0 "$pid" 2>/dev/null && [ "$n" -lt 5 ]; do
+    sleep 1
+    n=$((n + 1))
+  done
+  if kill -0 "$pid" 2>/dev/null; then kill "$pid"; fi
+  n=0
+  while kill -0 "$pid" 2>/dev/null && [ "$n" -lt 3 ]; do
+    sleep 1
+    n=$((n + 1))
+  done
+  if kill -0 "$pid" 2>/dev/null; then kill -KILL "$pid"; fi
+}
+
+eval "$COMPOSITOR_CMD" >>"$LOG" 2>&1 &
+pid=$!
+
+elapsed=0
+while kill -0 "$pid" 2>/dev/null && [ ! -e "$READY" ]; do
+  if [ "$elapsed" -ge "$FALLBACK_TIMEOUT" ]; then
+    echo "--- oozelogin watchdog: greeter not ready after ${FALLBACK_TIMEOUT}s" >>"$LOG"
+    stop_compositor
+    break
+  fi
+  sleep 1
+  elapsed=$((elapsed + 1))
+done
+
+wait "$pid"
+status=$?
+echo "--- oozelogin compositor exited status=$status" >>"$LOG"
+
+if [ -e "$OK" ]; then
+  exit 0
+fi
+
+echo "--- oozelogin starting fallback greeter" >>"$LOG"
+exec $FALLBACK_COMMAND

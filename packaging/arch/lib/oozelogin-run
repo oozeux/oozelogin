@@ -1,0 +1,29 @@
+#!/bin/bash
+. /usr/lib/oozelogin/env
+
+LOG="$OOZELOGIN_CACHE/greeter.log"
+READY="$OOZELOGIN_CACHE/greeter.ready"
+OK="$OOZELOGIN_CACHE/greeter.ok"
+
+{
+  echo "--- oozelogin greeter start $(date -Is)"
+  id
+  env | sort
+  ls -l /dev/dri
+} >>"$LOG" 2>&1
+
+/usr/bin/oozelogin-greeter >>"$LOG" 2>&1
+status=$?
+echo "--- oozelogin greeter exited status=$status" >>"$LOG"
+
+if [ "$status" -eq 0 ] && [ -e "$READY" ]; then
+  : >"$OK"
+fi
+
+if [ "$OOZELOGIN_COMPOSITOR" = "niri" ]; then
+  niri msg action quit --skip-confirmation
+elif [ "$OOZELOGIN_HYPRLAND_FORMAT" = "lua" ]; then
+  hyprctl dispatch 'hl.dsp.exit()'
+else
+  hyprctl dispatch exit
+fi

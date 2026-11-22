@@ -1,0 +1,13 @@
+post_install() {
+  cat <<MSG
+==> OozeLogin instalado.
+==> Prueba la pantalla con: oozelogin-preview
+==> Para usarla como login, copia /usr/share/oozelogin/greetd.toml a /etc/greetd/config.toml
+==> y activa greetd: sudo systemctl enable --force greetd.service
+==> Ajusta compositor y teclados en /etc/oozelogin/oozelogin.conf
+MSG
+}
+
+post_upgrade() {
+  systemd-tmpfiles --create oozelogin.conf >/dev/null 2>&1 || true
+}

@@ -1,0 +1,12 @@
+[Unit]
+Description=Watch OozeShell theme changes
+
+[Path]
+PathChanged=%h/.cache/oozeshell/colors.json
+PathChanged=%h/.cache/awww/last
+PathChanged=%h/.config/oozeshell/profile.toml
+PathChanged=%h/.config/oozeshell/profile.json
+Unit=oozelogin-sync.service
+
+[Install]
+WantedBy=default.target

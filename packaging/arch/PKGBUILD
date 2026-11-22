@@ -1,0 +1,17 @@
+pkgname=oozelogin
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Quickshell greeter for greetd with its own settings window'
+arch=('any')
+url='https://github.com/oozeux/oozelogin'
+license=('custom')
+depends=('greetd' 'greetd-tuigreet' 'polkit' 'python' 'curl' 'procps-ng' 'qt6-wayland' 'quickshell' 'ttf-nerd-fonts-symbols')
+makedepends=('make')
+optdepends=('hyprland: compositor that hosts the greeter'
+            'niri: alternative compositor that hosts the greeter')
+backup=('etc/oozelogin/oozelogin.conf' 'etc/oozelogin/settings.json')
+install=oozelogin.install
+
+package() {
+  make -C "$startdir/../.." DESTDIR="$pkgdir" install install-config
+}

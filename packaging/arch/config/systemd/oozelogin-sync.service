@@ -1,0 +1,6 @@
+[Unit]
+Description=Sync OozeShell theme to OozeLogin
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/oozelogin-sync --quiet
