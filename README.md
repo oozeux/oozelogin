@@ -98,6 +98,7 @@ El botón **Probar** de la ventana de ajustes lanza la misma vista previa.
 
 `oozelogin-sync` lee `~/.cache/oozeshell/colors.json` (matugen), el fondo actual de awww y `~/.config/oozeshell/profile.toml` o `profile.json`, y lo copia a `/var/lib/oozelogin`. Se ejecuta solo cada vez que cambian esos archivos con `services.oozelogin.sync.enable = true` (NixOS) o `--sync` en el instalador (Arch). En la página **OozeShell** de los ajustes activas el uso de esos colores y ese fondo.
 
+Para abrir los ajustes desde OozeShell puedes lanzar `oozelogin-settings` desde un atajo o un botón.
 
 ## Notas
 
