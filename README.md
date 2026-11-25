@@ -1,12 +1,56 @@
 # OozeLogin
 
-Greeter para greetd hecho con Quickshell, con ventana de configuración propia y conexión opcional con OozeShell. Funciona en NixOS y en Arch Linux desde el mismo repositorio.
+Greeter para greetd hecho con Quickshell, con ventana de configuración propia y conexión opcional con OozeShell. Funciona en NixOS y en Arch Linux.
 
 ## Instalación en NixOS
 
-OozeLogin es un flake independiente. Exporta un módulo de NixOS, un paquete, un overlay y apps para probarlo sin instalarlo.
+OozeLogin es un flake independiente. 
+
+Para instalarlo sigue lo siguiente:
+
+Crea un modulo llamado oozelogin.nix y enlazalo en tu configuration.nix puedes ver el ejemplo desde [configuration.nix](https://github.com/oozeux/nix-home/blob/main/configuration.nix)
 
 ### Como módulo
+
+#### oozelogin.nix
+
+```nix
+
+{ config, pkgs, inputs, ... }:
+
+{
+  imports = [ inputs.oozelogin.nixosModules.default ];
+  
+  services.oozelogin = {
+    enable = true;
+    compositor = "hyprland";
+    compositorPackage = config.programs.hyprland.package;
+    keyboardLayouts = [ "us" "latam" ];
+    sync.enable = true;
+    settings = {
+      showStats = false;
+      showWeather = false;
+    };
+  };
+}
+
+```
+Si usas otro compositor simplemente reemplaza el de hyprland por el que prefieras, el resto de la configuracion sigue igual, para poder cambiar el compositor debes activarlo en tu configuration.nix.
+
+Si activas mas de un compositor ademas del agregado en la configuracion se puede cambiar desde la pantalla de inicio, esta configuracion quedaría simplemente como el compositor principal sin afectar el uso de uno o más compositores.
+
+```nix
+
+imports = [ inputs.oozelogin.nixosModules.default ];
+  
+  services.oozelogin = {
+    enable = true;
+    compositor = "niri";
+    compositorPackage = config.programs.niri.package;
+    # ...
+```
+
+#### Nix flake
 
 ```nix
 {
@@ -18,18 +62,23 @@ OozeLogin es un flake independiente. Exporta un módulo de NixOS, un paquete, un
     };
   };
 
-  outputs = { nixpkgs, oozelogin, ... }: {
-    nixosConfigurations.host = nixpkgs.lib.nixosSystem {
+  outputs = { self, nixpkgs, ... }@inputs: {
+    nixosConfigurations.nixos = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      specialArgs = { inherit inputs; };
       modules = [
-        oozelogin.nixosModules.default
-        { services.oozelogin.enable = true; }
+        ./configuration.nix
       ];
     };
   };
 }
+
 ```
 
 Tu usuario debe estar en el grupo `users` (o cambia `services.oozelogin.group`). Después `sudo nixos-rebuild switch`.
+
+#### Nota:
+ El compositor que uses debe estar habilitado en algún módulo de tu configuración (por ejemplo programs.hyprland.enable = true; o programs.niri.enable = true;), ya que oozelogin.nix referencia config.programs.(compositor).package. No importa en qué archivo .nix lo habilites, solo que exista. Para ver un ejemplo de configuración completa revisa: [nix-home](https://github.com/oozeux/nix-home).
 
 ### Probar sin instalar (cualquier distro con Nix)
 
@@ -40,13 +89,6 @@ nix run github:oozeux/oozelogin#settings
 
 Fuera del módulo, la configuración y la caché viven en `~/.local/state/oozelogin` y `~/.cache/oozelogin`.
 
-### Sin flakes
-
-`imports = [ /ruta/a/oozelogin/nix/module.nix ];`
-
-### Desarrollo
-
-`nix develop` entrega Quickshell y Python. `nix build` construye el paquete y `nix flake check` lo verifica.
 
 ## Instalación en Arch Linux
 
